@@ -69,6 +69,14 @@ module.exports = {
             target: proxyTarget,
             changeOrigin: true,
           },
+          '/schemas': {
+            target: proxyTarget,
+            changeOrigin: true,
+          },
+          '/references': {
+            target: proxyTarget,
+            changeOrigin: true,
+          },
           '/subscription': {
             ws: true,
             changeOrigin: true,

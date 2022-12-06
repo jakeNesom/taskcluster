@@ -9,7 +9,6 @@ const { consume } = require('taskcluster-lib-pulse');
 const { deprecatedStatusHandler } = require('./deprecatedStatus');
 const { taskGroupCreationHandler } = require('./taskGroupCreation');
 const { statusHandler } = require('./status');
-const { taskDefinedHandler } = require('./taskDefined');
 const { jobHandler } = require('./job');
 const { rerunHandler } = require('./rerun');
 const { POLICIES } = require('./policies');
@@ -28,7 +27,6 @@ class Handlers {
       deprecatedResultStatusQueueName,
       deprecatedInitialStatusQueueName,
       resultStatusQueueName,
-      initialStatusQueueName,
       rerunQueueName,
       intree,
       context,
@@ -50,7 +48,6 @@ class Handlers {
     this.jobQueueName = jobQueueName;
     this.rerunQueueName = rerunQueueName;
     this.deprecatedInitialStatusQueueName = deprecatedInitialStatusQueueName;
-    this.initialStatusQueueName = initialStatusQueueName;
     this.context = context;
     this.pulseClient = pulseClient;
 
@@ -62,11 +59,12 @@ class Handlers {
     this.jobPq = null;
     this.resultStatusPq = null;
     this.deprecatedResultStatusPq = null;
-    this.initialTaskStatusPq = null;
     this.deprecatedInitialStatusPq = null;
     this.rerunPq = null;
 
     this.queueClient = null;
+
+    this.handlersCount = {};
   }
 
   /**
@@ -75,7 +73,6 @@ class Handlers {
   async setup(options = {}) {
     assert(!this.jobPq, 'Cannot setup twice!');
     assert(!this.resultStatusPq, 'Cannot setup twice!');
-    assert(!this.initialTaskStatusPq, 'Cannot setup twice!');
     assert(!this.deprecatedResultStatusPq, 'Cannot setup twice!');
     assert(!this.deprecatedInitialStatusPq, 'Cannot setup twice!');
     assert(!this.rerunPq, 'Cannot setup twice!');
@@ -106,10 +103,13 @@ class Handlers {
     const schedulerId = this.context.cfg.taskcluster.schedulerId;
     const queueEvents = new taskcluster.QueueEvents({ rootUrl: this.rootUrl });
 
-    const statusBindings = [
+    // Listen for state changes of tasks and update check runs on github
+    const taskStatusBindings = [
+      queueEvents.taskDefined(`route.${this.context.cfg.app.checkTaskRoute}`),
       queueEvents.taskFailed(`route.${this.context.cfg.app.checkTaskRoute}`),
       queueEvents.taskException(`route.${this.context.cfg.app.checkTaskRoute}`),
       queueEvents.taskCompleted(`route.${this.context.cfg.app.checkTaskRoute}`),
+      queueEvents.taskRunning(`route.${this.context.cfg.app.checkTaskRoute}`),
     ];
 
     // Listen for state changes to the taskcluster tasks and taskgroups
@@ -127,22 +127,29 @@ class Handlers {
       githubEvents.taskGroupCreationRequested(`route.${this.context.cfg.app.statusTaskRoute}`),
     ];
 
-    // Listen for taskDefined event to create initial status on github
-    const taskBindings = [
-      queueEvents.taskDefined(`route.${this.context.cfg.app.checkTaskRoute}`),
-    ];
+    // This handler is called by PulseConsumer in sync manner
+    // If this would have wait for handler to finish,
+    // it will block new messages from being processed on time
+    // Consumer by default uses "prefetch: 5", which means only 5 messages would be delivered to client at a time,
+    // before client ACK them.
+    // To avoid queue grow over time we consume all messages and let nodejs runtime handle concurrent routines.
+    const callHandler = (name, handler) => {
+      const timedHandler = this.monitor.timedHandler(`${name}listener`, handler.bind(this));
 
-    const callHandler = (name, handler) => message => {
-      handler.call(this, message).catch(async err => {
-        await this.monitor.reportError(err);
-        return err;
-      }).then((err = null) => {
-        if (this.handlerComplete && !err) {
-          this.handlerComplete();
-        } else if (this.handlerRejected && err) {
-          this.handlerRejected(err);
-        }
-      });
+      return (message) => {
+        this._handlerStarted(name);
+        timedHandler.call(this, message).catch(async err => {
+          await this.monitor.reportError(err);
+          return err;
+        }).then((err = null) => {
+          this._handlerFinished(name, !!err);
+          if (this.handlerComplete && !err) {
+            this.handlerComplete();
+          } else if (this.handlerRejected && err) {
+            this.handlerRejected(err);
+          }
+        });
+      };
     };
 
     this.jobPq = await consume(
@@ -151,7 +158,7 @@ class Handlers {
         bindings: jobBindings,
         queueName: this.jobQueueName,
       },
-      this.monitor.timedHandler('joblistener', callHandler('job', jobHandler).bind(this)),
+      callHandler('job', jobHandler),
     );
 
     this.deprecatedResultStatusPq = await consume(
@@ -160,7 +167,7 @@ class Handlers {
         bindings: deprecatedResultStatusBindings,
         queueName: this.deprecatedResultStatusQueueName,
       },
-      this.monitor.timedHandler('deprecatedStatuslistener', callHandler('status', deprecatedStatusHandler).bind(this)),
+      callHandler('status', deprecatedStatusHandler),
     );
 
     this.deprecatedInitialStatusPq = await consume(
@@ -169,25 +176,16 @@ class Handlers {
         bindings: deprecatedInitialStatusBindings,
         queueName: this.deprecatedInitialStatusQueueName,
       },
-      this.monitor.timedHandler('deprecatedlistener', callHandler('task', taskGroupCreationHandler).bind(this)),
+      callHandler('task', taskGroupCreationHandler),
     );
 
     this.resultStatusPq = await consume(
       {
         client: this.pulseClient,
-        bindings: statusBindings,
+        bindings: taskStatusBindings,
         queueName: this.resultStatusQueueName,
       },
-      this.monitor.timedHandler('statuslistener', callHandler('status', statusHandler).bind(this)),
-    );
-
-    this.initialTaskStatusPq = await consume(
-      {
-        client: this.pulseClient,
-        bindings: taskBindings,
-        queueName: this.initialStatusQueueName,
-      },
-      this.monitor.timedHandler('tasklistener', callHandler('task', taskDefinedHandler).bind(this)),
+      callHandler('status', statusHandler),
     );
 
     this.rerunPq = await consume(
@@ -196,9 +194,10 @@ class Handlers {
         bindings: rerunBindings,
         queueName: this.rerunQueueName,
       },
-      this.monitor.timedHandler('rerunlistener', callHandler('rerun', rerunHandler).bind(this)),
+      callHandler('rerun', rerunHandler),
     );
 
+    this.reportHandlersCount = setInterval(() => this._reportHandlersCount(), 60 * 1000);
   }
 
   async terminate() {
@@ -208,9 +207,6 @@ class Handlers {
     if (this.resultStatusPq) {
       await this.resultStatusPq.stop();
     }
-    if (this.initialTaskStatusPq) {
-      await this.initialTaskStatusPq.stop();
-    }
     if (this.deprecatedResultStatusPq) {
       await this.deprecatedResultStatusPq.stop();
     }
@@ -219,6 +215,9 @@ class Handlers {
     }
     if (this.rerunPq) {
       await this.rerunPq.stop();
+    }
+    if (this.reportHandlersCount) {
+      clearInterval(this.reportHandlersCount);
     }
   }
 
@@ -370,6 +369,40 @@ class Handlers {
     }
 
     return yaml.load(Buffer.from(response.data.content, 'base64').toString());
+  }
+
+  _handlerStarted(name) {
+    if (typeof this.handlersCount[name] === 'undefined') {
+      this.handlersCount[name] = {
+        total: 1,
+        finished: 0,
+        error: 0,
+      };
+    } else {
+      this.handlersCount[name].total += 1;
+    }
+  }
+
+  _handlerFinished(name, hasError = false) {
+    this.handlersCount[name].finished += 1;
+    if (hasError) {
+      this.handlersCount[name].error += 1;
+    }
+  }
+
+  _reportHandlersCount() {
+    if (!this.monitor) {
+      return;
+    }
+
+    for (const [handlerName, stats] of Object.entries(this.handlersCount)) {
+      this.monitor.log.githubActiveHandlers({
+        handlerName,
+        totalCount: stats.total,
+        runningCount: stats.total - stats.finished,
+        errorCount: stats.error,
+      });
+    }
   }
 }
 

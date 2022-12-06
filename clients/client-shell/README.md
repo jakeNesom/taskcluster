@@ -11,21 +11,31 @@ scripts.  It provides utilities ranging from direct calls to the specific API
 endpoints to more complex and _practical_ tasks like listing and cancelling
 scheduled runs.
 
-### Installation
+## Installation
 
-To install, Linux users should download the `taskcluster` binary for the latest release your
+### Homebrew (recommended)
+
+```bash
+brew install taskcluster/tap/taskcluster
+```
+Link to the Homebrew Tap: [taskcluster/homebrew-tap](https://github.com/taskcluster/homebrew-tap).
+
+### Curl
+
+Linux users should download the `taskcluster` binary for the latest release your
 platform, run `chmod +x` and run it!
 
 MacOS users run the following command:
-```shell
-curl -L https://github.com/taskcluster/taskcluster/releases/download/v44.17.0/taskcluster-darwin-amd64 --output taskcluster
+```bash
+curl -L https://github.com/taskcluster/taskcluster/releases/download/v45.0.1/taskcluster-darwin-amd64 --output taskcluster
 ```
 This is to ensure the binary is not quarantined by MacOS.
 You will need to `chmod +x` of
 course.
 
- * [linux-amd64](https://github.com/taskcluster/taskcluster/releases/download/v44.17.0/taskcluster-linux-amd64)
- * [darwin-amd64](https://github.com/taskcluster/taskcluster/releases/download/v44.17.0/taskcluster-darwin-amd64)
+ * [linux-amd64](https://github.com/taskcluster/taskcluster/releases/download/v45.0.1/taskcluster-linux-amd64)
+ * [darwin-amd64](https://github.com/taskcluster/taskcluster/releases/download/v45.0.1/taskcluster-darwin-amd64)
+ * [darwin-arm64](https://github.com/taskcluster/taskcluster/releases/download/v45.0.1/taskcluster-darwin-arm64)
 
 ## Usage
 

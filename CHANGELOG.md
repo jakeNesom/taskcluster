@@ -3,6 +3,417 @@
 <!-- `yarn release` will insert the existing changelog snippets here: -->
 <!-- NEXT RELEASE HERE -->
 
+## v45.0.1
+
+### GENERAL
+
+▶ [patch]
+Minor and patch version bumps via Dependabot using `pmac`:
+
+`pmac add 5822 5821 5819 5818 5817 5816 5815 5814 5813 5790 5789`
+
+### USERS
+
+▶ [patch] [bug 1803745](http://bugzil.la/1803745)
+Docker-worker and generic-worker now skip gzipping artifacts with a `.deb` extension.
+
+## v45.0.0
+
+### GENERAL
+
+▶ [minor] [#1955](https://github.com/taskcluster/taskcluster/issues/1955)
+Adds timing statistics to the Task Group page: durations for each task, totals, median and shows distribution graph.
+
+▶ [minor] [#5379](https://github.com/taskcluster/taskcluster/issues/5379)
+MUI tables are now more responsive to smaller width screens. The worker manager page, no longer has the emails of the task owner displayed.
+
+▶ [patch]
+Go upgrade from 1.18.5 to 1.19.3. Also upgrades golangci-lint version to 1.50.1 for go1.19 support.
+
+### WORKER-DEPLOYERS
+
+▶ [minor] [#4605](https://github.com/taskcluster/taskcluster/issues/4605)
+Generic-worker can now create object artifacts instead of s3 artifacts if the
+`createObjectArtifacts` worker configuration parameter is true.
+
+▶ [patch] [#5634](https://github.com/taskcluster/taskcluster/issues/5634)
+The livelog docker image used by docker-worker now is not based on busybox, but
+contains only the livelog binary, /etc/ssl/certs/ca-certificates.crt and an
+empty /tmp directory. This effectively reverses the change from #3866.
+
+### USERS
+
+▶ [MAJOR] [#5799](https://github.com/taskcluster/taskcluster/issues/5799)
+Docker Worker no longer supports the `disableSeccomp` capability (added in Docker Worker 44.22.0, but turned out to be unneeded).
+
+Since this is technically a breaking change, a major version bump is necessary. However, as far as we know, nothing needed this feature.
+
+▶ [minor] [#4624](https://github.com/taskcluster/taskcluster/issues/4624)
+The object service now supports an additional download method, `getUrl`, which handles gzipped content and requires that hashes be validated.
+This method is not yet supported by the client libraries (but such support will be added soon).
+
+▶ [patch] [#5779](https://github.com/taskcluster/taskcluster/issues/5779)
+Fix `View logs in Taskcluster` link in GitHub Checks UI to default to a run ID of 0 to prevent it from being undefined and getting a 400 Bad Response while accessing this link.
+
+▶ [patch]
+Updated livelog link in GitHub checks UI to points to a streaming livelog. Previous link would only render the logs once the task was complete.
+
+### DEVELOPERS
+
+▶ [patch]
+Upgrades some rust crates and bumps rust version from 1.60.0 to 1.65.0.
+
+### OTHER
+
+▶ Additional changes not described here: [#5781](https://github.com/taskcluster/taskcluster/issues/5781), [#5795](https://github.com/taskcluster/taskcluster/issues/5795).
+
+## v44.23.4
+
+### GENERAL
+
+▶ [patch]
+Upgrades to latest Node version, v16.18.1.
+
+## v44.23.3
+
+### GENERAL
+
+▶ [patch]
+Minor and patch version bumps via Dependabot using `pmac`:
+
+`pmac add 5746 5747 5749 5750 5751`
+
+▶ [patch]
+Upgrades taskgraph from v1.2.0 to v3.4.0.
+
+## v44.23.2
+
+### GENERAL
+
+▶ [patch] [#5737](https://github.com/taskcluster/taskcluster/issues/5737)
+Fix React props handling for TaskGroup page in production mode.
+
+## v44.23.1
+
+### GENERAL
+
+▶ [patch] [#5728](https://github.com/taskcluster/taskcluster/issues/5728)
+Adds auto release lock functionality to queued locks to prevent some GitHub handlers to run forever and keep the queue locked.
+
+▶ [patch] [#5737](https://github.com/taskcluster/taskcluster/issues/5737)
+Persist task group filter in URL, so navigating back restores filtered state.
+
+## v44.23.0
+
+### GENERAL
+
+▶ [minor] [#5728](https://github.com/taskcluster/taskcluster/issues/5728)
+Changed the way that github events are being handled.
+There was a problem with treating those callbacks in async manner which resulted in total messages being processed to be limited by consumer's "prefetch" count (5 by default). And resulted in messages being piled up.
+Introduces extra monitoring information with the numbers of active handlers count and total messages processed.
+
+▶ [patch]
+Upgrades `@xmldom/xmldom` to 0.7.6 to fix critical security vulnerability.
+
+Also utilized the `yarn upgrade-interactive --latest` command for the following package upgrades:
+
+`@azure/ms-rest-js@2.6.2, apollo-server-core@3.10.3, apollo-server-express@3.10.3, aws-sdk@2.1238.0, express@4.18.2, graphql-scalars@1.20.0, jwks-r
+sa@2.1.5, marked@4.1.1, nodemailer@6.8.0, passport-auth0@1.4.3, pg@8.8.0, sanitize-html@2.7.2, c8@7.12.0, commander@9.4.1, dockerode@3.3.4, nock@13.2.9`
+
+▶ [patch]
+Upgrades to latest Node version, v16.18.0.
+
+### DEPLOYERS
+
+▶ [patch] [#5726](https://github.com/taskcluster/taskcluster/issues/5726)
+The github service no longer fetches live logs from workers, but instead fetches backing logs from artifact storage. This reduces exceptions due to certificate expiries of live logs from stateless dns server.
+
+## v44.22.1
+
+### GENERAL
+
+▶ [patch]
+Reverts commit e2015f35330a4b059d1bccf55c871df2af77bfbb.
+
+## v44.22.0
+
+### GENERAL
+
+▶ [minor]
+Add a docker-worker capability `disableSeccomp` to disable the seccomp
+system call filter.
+
+It allows significant information leakage, and its use should not be
+considered secure. This is required to run `rr` inside a container, as
+described here: https://github.com/mozilla/rr/wiki/Docker
+
+▶ [patch]
+Adjust GCP CloudBuild config to cancel other ongoing jobs, so that the latest job is the only one that runs and no race conditions will occur with deploying to dev.
+
+▶ [patch]
+Upgrade many deps with the following command:
+`pmac add 5692 5691 5690 5689 5688 5687`
+
+▶ [patch]
+Upgrades to latest Node version, v16.17.1, which is a security release.
+
+### USERS
+
+▶ [minor]
+Added basic dashboard stats: Worker pools, provisioners, hooks, clients counts.
+
+## v44.21.0
+
+### GENERAL
+
+▶ [minor] [#4534](https://github.com/taskcluster/taskcluster/issues/4534)
+Add completions for other shells
+
+### WORKER-DEPLOYERS
+
+▶ [patch] [#5666](https://github.com/taskcluster/taskcluster/issues/5666)
+The generic-worker no longer panics if it gets no HTTP responses from Queue for over 15 minutes.
+
+### DEVELOPERS
+
+▶ [minor]
+Refactored github status checks handler to do handle task status transitions in single place.
+
+Previous implementation relied on two handlers: taskDefined and statusChanged.
+For some tasks both events happened at the same time, which led to a race condition and multiple check_runs being created.
+To prevent concurrent handlers overwriting newer updates, simple time-based check was added to prevent this.
+
+## v44.20.4
+
+### DEVELOPERS
+
+▶ [patch] [#5663](https://github.com/taskcluster/taskcluster/issues/5663)
+This patch upgrades to the new, v2 Docker Hub APIs.
+v1 APIs were deprecated as of September 5, 2022 - see [here](https://www.docker.com/blog/docker-hub-v1-api-deprecation/) for more info.
+
+## v44.20.3
+
+### USERS
+
+▶ [patch]
+Fixes UI bug with hooks creation form, where changing Exchange input resulted in error message.
+
+▶ [patch]
+Trim ANSI control codes from the live log that is being shown in github check run.
+
+## v44.20.2
+
+No changes
+
+## v44.20.1
+
+### DEVELOPERS
+
+▶ [patch]
+Trim github payload for the check run updates call.
+
+▶ [patch]
+Build generic worker docker image as part of the release process.
+
+## v44.20.0
+
+### GENERAL
+
+▶ [patch] [#5653](https://github.com/taskcluster/taskcluster/issues/5653)
+Fix a bug with github status checks not being updated.
+
+In 44.19.1 release github service started tracking additional task
+state changes, and this resulted in a race condition between "taskDefined"
+and "status" handlers where both of them would create new check run at
+the same time. Wrong check run would later get all status updates, while
+Github UI will be showing a different check run which didn't receive all
+the updates.
+
+▶ [patch]
+Upgrade node to the latest LTS release, v16.17.0
+
+### DEPLOYERS
+
+▶ [patch] [#5041](https://github.com/taskcluster/taskcluster/issues/5041)
+Add support for private docker registry by adding `imagePullSecrets` config value.
+
+### DEVELOPERS
+
+▶ [minor] [#5295](https://github.com/taskcluster/taskcluster/issues/5295)
+When hovering over a task in a group task, the background color changes for the whole row, now. As opposed to a portion of the row.
+
+▶ [patch]
+Building and publishing generic worker docker image
+
+▶ [patch] [#5217](https://github.com/taskcluster/taskcluster/issues/5217)
+This patch gets a tail of the last 250 lines of the `live.log` file and provides it in the GitHub checks view without having to visit the Taskcluster UI.
+
+## v44.19.1
+
+### GENERAL
+
+▶ [patch]
+Fix broken devel image build
+
+## v44.19.0
+
+This release failed, please see v44.19.1
+---
+
+### GENERAL
+
+▶ [minor] [#5085](https://github.com/taskcluster/taskcluster/issues/5085)
+Github integration handles task reruns, triggered from the Taskcluster side.
+Check run status updates will include in_progress and queued sates for such tasks.
+
+▶ [patch]
+Fixes error logging for "re-run" github event.
+Improves '[ci skip]' logic to also include pull_request events.
+Adds documentation on how to debug github integration locally.
+
+▶ [patch]
+Remove duplicate ingres paths as redundant
+
+### DEPLOYERS
+
+▶ [minor] [#4913](https://github.com/taskcluster/taskcluster/issues/4913)
+Adds support for nginx ingress for routes definitions.
+Adds support for certbot annotations.
+
+### ADMINS
+
+▶ [minor] [#5616](https://github.com/taskcluster/taskcluster/issues/5616)
+For projects with `policy.pullRequests` set to `public_restricted`, Taskcluster Github will now assume the role `repo:github.com/${ payload.organization }/${ payload.repository }:pull-request-untrusted`. Administrators will need to create this role for all `public_restricted` projects.
+
+### USERS
+
+▶ [minor] [#5311](https://github.com/taskcluster/taskcluster/issues/5311)
+Github integration can skip creation of tasks for single commits that include "[ci skip]" or "[skip ci]" message.
+
+▶ [patch] [#5046](https://github.com/taskcluster/taskcluster/issues/5046)
+UI automatically goes to the latest run on rerun action.
+Task page listens to updates on task status and updates the page.
+
+▶ [patch]
+UI: Pulse Messages autocompletes known exchanges
+
+### DEVELOPERS
+
+▶ [minor] [#5611](https://github.com/taskcluster/taskcluster/issues/5611)
+Added paddingLeft to the root MUISelect in the overrides in theme.js.
+
+Choosing a worker type out of the dropdown menu from the Create Task page now displays the chosen type with appropriate padding from the left. The chosen worker type no longer appears glued to the left border.
+
+▶ [patch]
+Docker compose: static worker not started by default.
+
+▶ [patch]
+Switch to devel image for docker-compose.dev.yml.
+Installing nodemon only in devel image.
+
+▶ [patch]
+Use tc-admin to setup local env.
+
+▶ [patch]
+This patch makes it so that a `yarn smoketest` on our dev environment is run after a successful deploy.
+
+## v44.18.0
+
+### GENERAL
+
+▶ [patch] [#5577](https://github.com/taskcluster/taskcluster/issues/5577)
+Adds linting functionality in the Create Task page.
+
+Validates create task and its payload based on the selected worker type.
+
+▶ [patch]
+Update go version from 1.18.4 to 1.18.5 for building generic-worker, livelog, taskcluster-proxy, start-worker, and the taskcluster cli.
+Update golangci-lint from 1.46.2 to 1.47.3 for linting go code.
+
+### USERS
+
+▶ [patch] [#5555](https://github.com/taskcluster/taskcluster/issues/5555)
+This patch fixes an issue with filtering workers based on quarantined status. The issue only occurs with static workers that are quarantined. When the filter was active, those static, quarantined workers would not be displayed in the list. This issue was first brought up in v44.17.0.
+
+### DEVELOPERS
+
+▶ [minor]
+Docker compose changes and improvements:
+* `generic-worker` runs with local `docker compose` and is able to execute tasks
+* (breaking change) default ingress service was renamed to `taskcluster` and now binds to port `80` instead of `8080`
+* manual entry of '127.0.0.1 taskcluster' to `/etc/hosts` is necessary in order to make HAWK authentication work properly across whole UI
+
+New tutorial page is added `docs/tutorial/local-dev` describing how to launch Taskcluster locally and run a simple task.
+
+▶ [patch]
+Auto-reload services in docker-compose.dev.yml when source changes.
+This will allow to develop services without restarting manually docker compose.
+
+▶ [patch] [#5602](https://github.com/taskcluster/taskcluster/issues/5602)
+Introduced docker compose profiles to allow running background tasks and cron jobs.
+
+▶ [patch]
+Added scripts to `package.json` to more easily use the `docker compose` commands.
+
+New `yarn` commands: `start`, `stop`, `dev:start`, `dev:stop`, `prod:start`, and `prod:stop`.
+
+## v44.17.2
+
+### GENERAL
+
+▶ [patch]
+Go update from 1.18.3 to 1.18.4. Also updates the git version for generic worker decision tasks from `git2.24.0.2` to `git2.37.1`.
+
+### DEPLOYERS
+
+▶ [patch] [bug 1633440](http://bugzil.la/1633440)
+Spread cron task times that started at 00:00 to minimize CPU spikes and DB loads.
+
+### USERS
+
+▶ [patch]
+Set the `key` field on the login window to a password field instead of a text one
+
+### DEVELOPERS
+
+▶ [patch]
+Fix docker compose sometimes not starting the ingress container
+
+▶ [patch] [#5553](https://github.com/taskcluster/taskcluster/issues/5553)
+This change adds continuous deployment support to the `cloudbuild.yaml` file so that each change to `main` results in a new deployment to [`https://dev.alpha.taskcluster-dev.net/`](https://dev.alpha.taskcluster-dev.net/).
+
+▶ [patch] [#5554](https://github.com/taskcluster/taskcluster/issues/5554)
+This patch splits the docker compose file into separate dev and prod configuration files. For prod-like deployments, where you want to use the latest `taskcluster/taskcluster` docker image, use the command `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`. For development deployments, where local source code mounts as volumes for testing/debugging purposes, use the command `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`.
+
+This change also switches `docker-compose` (v1) references over to `docker compose` (v2). See [here](https://docs.docker.com/compose/#compose-v2-and-the-new-docker-compose-command) for more details.
+
+## v44.17.1
+
+### GENERAL
+
+▶ [patch]
+Remove unused config value auditLog
+
+▶ [patch]
+This patch addresses the following vuln in `passport` https://security.snyk.io/vuln/SNYK-JS-PASSPORT-2840631. This also upgrades `express` to the latest stable release.
+
+▶ [patch] [#5557](https://github.com/taskcluster/taskcluster/issues/5557)
+This patch upgrades to Debian 10 docker images, as Debian 9 hit EOL.
+
+▶ [patch]
+Upgrade node to the latest LTS release, v16.16.0.
+This is a security release. More info can be found [here](https://nodejs.org/en/blog/vulnerability/july-2022-security-releases/#update-07-july-2022-security-releases-available).
+
+### DEVELOPERS
+
+▶ [patch]
+Remove node-fetch dependency from ui/ as it was only used in abandoned queryServer.js script to cache possible graphql types.
+
+▶ [patch] [#5391](https://github.com/taskcluster/taskcluster/issues/5391)
+Skip github checks if github build is unkown.
+This happens in periodic and manual hooks that are doing some periodic operations on github repo.
+Those operations are not initiated by github, so there is no new build/check suite created for those events.
+
 ## v44.17.0
 
 ### GENERAL

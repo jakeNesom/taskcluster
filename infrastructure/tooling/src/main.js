@@ -34,6 +34,7 @@ program.name('yarn'); // these commands are invoked via yarn
 program.command('build')
   .option('-p, --push', 'Push images to a Docker registry')
   .option('--docker-repo <monoimage-docker-repo>', 'docker repository to which monoimage should be pushed')
+  .option('--docker-repo-generic-worker <generic-worker-docker-repo>', 'docker repository to which generic worker image should be pushed')
   .option('--base-dir <base-dir>', 'Base directory for build (fast and big!; default /tmp/taskcluster-builder-build)')
   .option('--no-cache', 'Do not use any cached state, instead building everything from scratch')
   .option('--dry-run', 'Do not run any tasks, but generate the list of tasks')
@@ -171,6 +172,13 @@ program.command('dev:verify')
   .action(actFn(({ options }) => {
     const { verify } = require('./dev');
     run(verify, options);
+  }));
+
+program.command('dev:templates')
+  .description('Dump kubernetes templates for debug purposes')
+  .action(actFn(({ options }) => {
+    const { templates } = require('./dev');
+    run(templates, options);
   }));
 
 program.command('dev:ensure:db')

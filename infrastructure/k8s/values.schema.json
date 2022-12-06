@@ -10,9 +10,6 @@
     "auth": {
       "additionalProperties": false,
       "properties": {
-        "audit_log": {
-          "type": "string"
-        },
         "aws_credentials_allowed_buckets": {
           "oneOf": [
             {
@@ -230,6 +227,10 @@
       ],
       "title": "Configuration options for built-in-workers",
       "type": "object"
+    },
+    "certManagerClusterIssuerName": {
+      "description": "Name of the cluster issuer, i.e. \"letsencrypt-prod\"",
+      "type": "string"
     },
     "dockerImage": {
       "description": "The docker image containing taskcluster.",
@@ -531,6 +532,10 @@
       "title": "Configuration options for hooks",
       "type": "object"
     },
+    "imagePullSecret": {
+      "description": "Secret name with docker credentials for private registry",
+      "type": "string"
+    },
     "index": {
       "additionalProperties": false,
       "properties": {
@@ -646,6 +651,14 @@
     },
     "ingressStaticIpName": {
       "description": "A google static ip object that the ingress can use to maintain the same ip address.",
+      "type": "string"
+    },
+    "ingressTlsSecretName": {
+      "description": "Name of the secret where cert is stored, i.e. \"dev-cert\". This can be provisioned manually or automatically, by using cert-manager",
+      "type": "string"
+    },
+    "ingressType": {
+      "description": "Allows to use non-GLB ingress types, like \"nginx\"",
       "type": "string"
     },
     "meta": {

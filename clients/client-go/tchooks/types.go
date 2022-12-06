@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	tcclient "github.com/taskcluster/taskcluster/v44/clients/client-go"
+	tcclient "github.com/taskcluster/taskcluster/v45/clients/client-go"
 )
 
 type (
@@ -66,7 +66,7 @@ type (
 		// Note that tasks may not be created at exactly the time specified.
 		Schedule []string `json:"schedule,omitempty"`
 
-		// Template for the task definition.  This is rendered using [JSON-e](https://taskcluster.github.io/json-e/)
+		// Template for the task definition.  This is rendered using [JSON-e](https://json-e.js.org/)
 		// as described in [firing hooks](/docs/reference/core/hooks/firing-hooks) to produce
 		// a task definition that is submitted to the Queue service.
 		//
@@ -109,7 +109,7 @@ type (
 		// See [cron-parser on npm](https://www.npmjs.com/package/cron-parser).
 		Schedule []string `json:"schedule"`
 
-		// Template for the task definition.  This is rendered using [JSON-e](https://taskcluster.github.io/json-e/)
+		// Template for the task definition.  This is rendered using [JSON-e](https://json-e.js.org/)
 		// as described in [firing hooks](/docs/reference/core/hooks/firing-hooks) to produce
 		// a task definition that is submitted to the Queue service.
 		//
@@ -175,6 +175,12 @@ type (
 
 	// List of lastFires
 	LastFiresList struct {
+
+		// A continuation token is returned if there are more results than listed
+		// here. You can optionally provide the token in the request payload to
+		// load the additional results.
+		ContinuationToken string `json:"continuationToken,omitempty"`
+
 		LastFires []Var `json:"lastFires"`
 	}
 

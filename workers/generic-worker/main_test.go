@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,7 +50,7 @@ func TestRevisionNumberStored(t *testing.T) {
 		// The version number in this error message is automatically updated on release by infrastructure/tooling/src/release/tasks.js
 
 		t.Fatalf("Git revision could not be determined - got '%v' but expected to match regular expression '^[0-9a-f](40)$'\n"+
-			"Did you specify `-ldflags \"-X github.com/taskcluster/taskcluster/v44/workers/generic-worker.revision=<GIT REVISION>\"` in your go test command?\n"+
+			"Did you specify `-ldflags \"-X github.com/taskcluster/taskcluster/v45/workers/generic-worker.revision=<GIT REVISION>\"` in your go test command?\n"+
 			"Try building generic-worker using the /workers/generic-worker/build.(sh|cmd) script in the taskcluster monorepo.", revision)
 	}
 	t.Logf("Git revision successfully retrieved: %v", revision)
@@ -165,7 +164,7 @@ func TestNonExecutableBinaryFailsTask(t *testing.T) {
 // calls removeTaskDirs(tempDir), and tests that only folders that started with
 // 'task_' were deleted and that the other files and folders were not.
 func TestRemoveTaskDirs(t *testing.T) {
-	d, err := ioutil.TempDir("", t.Name())
+	d, err := os.MkdirTemp("", t.Name())
 	if err != nil {
 		t.Fatalf("Could not create temp directory: %v", err)
 	}
@@ -195,7 +194,7 @@ func TestRemoveTaskDirs(t *testing.T) {
 		"applesnpears",                          // should remain
 		filepath.Join("task_12345", "abcde"),    // should be deleted
 	} {
-		err = ioutil.WriteFile(filepath.Join(d, file), []byte("hello world"), 0777)
+		err = os.WriteFile(filepath.Join(d, file), []byte("hello world"), 0777)
 		if err != nil {
 			t.Fatalf("Could not write %v file: %v", file, err)
 		}

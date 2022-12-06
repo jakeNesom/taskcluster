@@ -3,14 +3,13 @@ web:
   command: node services/web-server/src/main.js server
   readinessPath: .well-known/apollo/server-health
   paths:
-    - '/login'
     - '/login/*'
     - '/subscription'
     - '/graphql'
     - '/api/web-server/*'
 scanner:
   type: cron
-  schedule: '0 0 * * *'
+  schedule: '1 0 * * *'
   deadline: 86400
   command: node services/web-server/src/main.js scanner
 cleanup-expire-auth-codes:

@@ -4,10 +4,13 @@ const { listServices, readRepoYAML, writeRepoYAML, writeRepoFile } = require('..
 const SERVICES = listServices();
 
 const COMPOSE_FILENAME = 'docker-compose.yml';
+const DEV_COMPOSE_FILENAME = 'docker-compose.dev.yml';
+const PROD_COMPOSE_FILENAME = 'docker-compose.prod.yml';
 const NGINX_FILENAME = 'nginx.conf';
+const ENV_FILE_PATH = './docker/env/';
 
 const ports = {
-  ingress: ['8080:80'],
+  taskcluster: ['80:80'],
 
   auth: ['3011:80'],
   github: ['3012:80'],
@@ -21,10 +24,10 @@ const ports = {
   'worker-manager': ['3020:80'],
   'web-server': ['3050:3050'],
   ui: ['3022:80'],
+  references: ['3023:80'],
 };
 
 const servicePorts = (service) => (ports[service] || []);
-const servicePrimaryPort = (service) => ports[service][0].split(':')[0];
 const serviceHostPort = (service) => ports[service][0].split(':')[1];
 
 const staticClients = [
@@ -40,6 +43,8 @@ const staticClients = [
   { 'clientId': 'static/taskcluster/web-server', 'accessToken': 'j2Z6zW2QSLehailBXlosdw9e2Ti8R_Qh2M4buAEQfsMA' },
   { 'clientId': 'static/taskcluster/worker-manager', 'accessToken': 'j2Z6zW2QSLehailBXlosdw9e2Ti8R_Qh2M4buAEQfsMA' },
   { 'clientId': 'static/taskcluster/root', 'accessToken': 'j2Z6zW2QSLehailBXlosdw9e2Ti8R_Qh2M4buAEQfsMA' },
+  { 'clientId': 'static/generic-worker-compose-client', 'accessToken': 'j2Z6zW2QSLehailBXlosdw9e2Ti8R_Qh2M4buAEQfsMA',
+    description: 'Static generic worker client', scopes: ['*'] },
 ];
 
 const getTokenByService = (service) => staticClients.find(client => client.clientId.includes(service)).accessToken;
@@ -53,8 +58,8 @@ const workerManagerProviders = {
 const defaultValues = {
   NODE_ENV: 'development',
 
-  DEBUG: '*',
-  LEVEL: 'debug',
+  DEBUG: '',
+  LEVEL: 'info',
   FORCE_SSL: 'false',
   TRUST_PROXY: 'true',
 
@@ -63,7 +68,7 @@ const defaultValues = {
   READ_DB_URL: 'postgresql://postgres@postgres:5432/taskcluster',
   WRITE_DB_URL: 'postgresql://postgres@postgres:5432/taskcluster',
 
-  TASKCLUSTER_ROOT_URL: `http://ingress`,
+  TASKCLUSTER_ROOT_URL: `http://taskcluster`,
 
   PULSE_USERNAME: 'admin',
   PULSE_PASSWORD: 'admin',
@@ -72,13 +77,17 @@ const defaultValues = {
   PULSE_AMQPS: 'false',
 
   APPLICATION_NAME: 'Taskcluster',
-  GRAPHQL_ENDPOINT: `http://localhost:${servicePrimaryPort('ingress')}/graphql`,
-  GRAPHQL_SUBSCRIPTION_ENDPOINT: `http://localhost:${servicePrimaryPort('ingress')}/graphql`,
+  GRAPHQL_ENDPOINT: `http://taskcluster/graphql`,
+  GRAPHQL_SUBSCRIPTION_ENDPOINT: `http://taskcluster/subscription`,
   UI_LOGIN_STRATEGY_NAMES: 'local',
+  SITE_SPECIFIC: JSON.stringify({
+    tutorial_worker_pool_id: 'docker-compose/generic-worker',
+    tutorial_worker_schema: 'generic-simple-posix',
+  }),
 
   // Auth
   STATIC_CLIENTS: JSON.stringify(staticClients),
-  DB_CRYPTO_KEYS: '[{"id": "dev-init", "algo": "aes-256", "key": "AUZzegzU1Xp3dW2tPRU615HXI04oJTt9NDIokH3HXN4="}]',
+  DB_CRYPTO_KEYS: JSON.stringify([{ id: 'dev-init', algo: 'aes-256', key: 'AUZzegzU1Xp3dW2tPRU615HXI04oJTt9NDIokH3HXN4=' }]),
 
   // Worker Manager
   PROVIDERS: JSON.stringify(workerManagerProviders),
@@ -101,29 +110,40 @@ const defaultValues = {
   AWS_SECRET_ACCESS_KEY: 'miniopassword',
   AWS_FORCE_PATH_STYLE: 'true',
   AWS_SKIP_CORS_CONFIGURATION: 'true',
-  AWS_ENDPOINT: 's3://s3:9000',
+  AWS_ENDPOINT: 'http://taskcluster/',
 
   // Web server
   SESSION_SECRET: 'quaYpvahRKmYOz2-wR4jaw',
   UI_LOGIN_STRATEGIES: '',
-  PUBLIC_URL: `http://localhost:${servicePrimaryPort('ingress')}`,
+  PUBLIC_URL: 'http://taskcluster',
   ADDITIONAL_ALLOWED_CORS_ORIGIN: '',
   REGISTERED_CLIENTS: '[]',
+};
+
+const nodemonCmd = (service) => {
+  return [
+    'nodemon',
+    '--delay 3',
+    '--watch services',
+    '--watch libraries',
+    `--watch services/${service}`, // limit restarts to single service
+  ].join(' ');
 };
 
 exports.tasks = [];
 
 const healthcheck = (test) => ({
   test,
-  interval: '2s',
+  interval: '3s',
   timeout: '4s',
-  retries: 60,
+  retries: 100,
   start_period: '3s',
 });
 
 const uiConfig = [
   { type: '!env', var: 'PORT' },
   { type: '!env', var: 'APPLICATION_NAME' },
+  { type: '!env', var: 'TASKCLUSTER_ROOT_URL' },
   { type: '!env', var: 'GRAPHQL_SUBSCRIPTION_ENDPOINT' },
   { type: '!env', var: 'GRAPHQL_ENDPOINT' },
   { type: '!env', var: 'UI_LOGIN_STRATEGY_NAMES' },
@@ -131,16 +151,24 @@ const uiConfig = [
   { type: '!env:json', var: 'SITE_SPECIFIC', optional: true },
 ];
 
+const allowedBackgroundJobs = ['built-in-workers/server'];
+
 exports.tasks.push({
-  title: `Generate docker-compose.yml`,
+  title: `Generate docker-compose files`,
   requires: [
     ...SERVICES.map(name => `configs-${name}`),
     ...SERVICES.map(name => `procslist-${name}`),
     'target-nginx.conf',
   ],
-  provides: ['target-docker-compose.yml'],
+  provides: [
+    'target-docker-compose.yml',
+    'target-docker-compose.dev.yml',
+    'target-docker-compose.prod.yml',
+    'target-env-files',
+  ],
   run: async (requirements, utils) => {
     const currentRelease = await readRepoYAML(path.join('infrastructure', 'tooling', 'current-release.yml'));
+    const [, currentVersion] = currentRelease.image.split(':');
 
     const serviceEnv = (name) => {
       let config = name === 'ui' ? uiConfig : requirements[`configs-${name}`];
@@ -184,18 +212,41 @@ exports.tasks.push({
       }));
     };
 
-    const serviceDefinition = (name, overrides = {}) => ({
+    const serviceDefinition = (name, { _noPorts, _useEnvFile, ...opts } = {}) => ({
       image: currentRelease.image,
       networks: ['local'],
-      environment: serviceEnv(name),
-      ...overrides,
-      ...((overrides.ports || servicePorts(name)).length > 0
-        ? { ports: overrides.ports || servicePorts(name) } : {}),
+      ...(_useEnvFile ? { env_file: `${ENV_FILE_PATH}.${name}` } : {}),
+      ...opts,
+      ...(!_noPorts && (opts.ports || servicePorts(name).length > 0)
+        ? { ports: opts.ports || servicePorts(name) } : {}),
+    });
+
+    const serviceDefinitionProd = (name, profiles = null) => ({
+      environment: {
+        NODE_ENV: 'production',
+      },
+      ...(profiles ? { profiles } : {}),
+    });
+
+    const serviceDefinitionDev = (name, profiles = null, originalCommand) => ({
+      image: `${currentRelease.image}-devel`,
+      environment: {
+        NODE_ENV: 'development',
+        DEBUG: '*',
+      },
+      volumes: [
+        './db:/app/db', // in case of new migrations
+        './clients:/app/clients',
+        './libraries:/app/libraries',
+        `./services/${name}:/app/services/${name}`, // service should only care about own code
+      ],
+      ...(profiles ? { profiles } : {}),
+      command: '',
+      entrypoint: `/bin/sh -c "${originalCommand.replace(/^node /, `${nodemonCmd(name)} `)}"`,
     });
 
     const dockerCompose = {
       'x-autogenerated': 'This file is autogenerated',
-      version: '3',
       volumes: {
         'db-data': {},
       },
@@ -284,27 +335,128 @@ exports.tasks.push({
             MINIO_ROOT_PASSWORD: 'miniopassword',
           },
         }),
-        ui: serviceDefinition('ui', { command: ['ui/web'] }),
-        ingress: serviceDefinition('ingress', {
+        ui: serviceDefinition('ui', {
+          command: 'ui/web',
+          _useEnvFile: true,
+        }),
+        references: serviceDefinition('references', {
+          command: 'references/web',
+          environment: {
+            TASKCLUSTER_ROOT_URL: defaultValues.TASKCLUSTER_ROOT_URL,
+          },
+        }),
+        taskcluster: serviceDefinition('taskcluster', {
           image: 'nginx:1.21.6',
           depends_on: ['ui', 'web-server-web'],
           volumes: [
             './docker/nginx.conf:/etc/nginx/nginx.conf',
           ],
+          healthcheck: healthcheck('curl -I http://localhost/'),
+        }),
+        tc_admin_init: serviceDefinition('tc_admin_init', {
+          image: 'taskcluster/tc-admin:3.2.0',
+          volumes: ['./docker/tc-admin:/app'],
+          working_dir: '/app',
+          'x-info': 'This script provisions taskcluster configuration. See docker/tc-admin for details',
+          environment: {
+            TASKCLUSTER_ROOT_URL: defaultValues.TASKCLUSTER_ROOT_URL,
+            TASKCLUSTER_CLIENT_ID: 'static/taskcluster/root',
+            TASKCLUSTER_ACCESS_TOKEN: getTokenByService('root'),
+          },
+          entrypoint: [
+            '/bin/sh -c "',
+            'echo \'Applying config\'; tc-admin apply ||true;',
+            '"',
+          ].join(' '),
+          depends_on: Object.fromEntries(
+            ['auth-web', 'hooks-web', 'queue-web', 'worker-manager-web', 'secrets-web', 'taskcluster'].map(
+              svc => ([svc, { condition: 'service_healthy' }]),
+            ),
+          ),
         }),
       },
+    };
+
+    const dockerComposeProd = {
+      'x-autogenerated': 'This file is autogenerated',
+      services: {
+        pg_init_db: serviceDefinitionProd('pg_init_db', null),
+        ui: serviceDefinitionProd('ui', null),
+      },
+    };
+
+    const dockerComposeDev = {
+      'x-autogenerated': 'This file is autogenerated',
+      services: {
+        pg_init_db: { volumes: ['./db:/app/db'] },
+        ui: {
+          image: 'taskcluster/ui',
+          build: {
+            context: './ui',
+            dockerfile: 'Dockerfile',
+          },
+          environment: {
+            TASKCLUSTER_ROOT_URL: 'http://taskcluster',
+          },
+          command: 'start:docker',
+          volumes: [
+            './generated:/app/generated',
+            '.all-contributorsrc:/app/.all-contributorsrc',
+            './ui:/app/ui',
+          ],
+        },
+      },
+    };
+
+    ['standalone', 'static'].forEach(type => {
+      dockerCompose.services[`generic-worker-${type}`] = serviceDefinition('generic-worker', {
+        image: `taskcluster/generic-worker:${currentVersion}`, // this image is built locally at the moment
+        restart: 'unless-stopped', // if they crash, restart it to pick up next jobs
+        volumes: [
+          './docker/generic-worker-config.json:/etc/generic-worker/config.json',
+          './docker/worker-runner-config.json:/etc/generic-worker/worker-runner.json',
+        ],
+        command: type,
+        environment: {
+          TASKCLUSTER_ROOT_URL: 'http://taskcluster',
+          TASKCLUSTER_CLIENT_ID: 'static/generic-worker-compose-client',
+          TASKCLUSTER_ACCESS_TOKEN: getTokenByService('generic-worker'),
+        },
+        ...(type === 'static' ? { profiles: ['workers'] } : {}), // start only standalone by default
+        depends_on: {
+          rabbitmq: { condition: 'service_healthy' },
+          'auth-web': { condition: 'service_healthy' },
+          'queue-web': { condition: 'service_healthy' },
+          taskcluster: { condition: 'service_started' },
+          tc_admin_init: { condition: 'service_completed_successfully' },
+        },
+      });
+
+      // allow rebuild
+      dockerComposeDev.services[`generic-worker-${type}`] = serviceDefinition('generic-worker', {
+        image: `taskcluster/generic-worker:${currentVersion}`,
+        build: {
+          context: '.',
+          dockerfile: 'generic-worker.Dockerfile',
+        },
+      });
+    });
+
+    const envFiles = {
+      ui: serviceEnv('ui'),
     };
 
     for (let name of SERVICES) {
       const procs = requirements[`procslist-${name}`];
       // only web services for now
       Object.keys(procs).forEach((proc) => {
-        const isWeb = procs[proc].type === 'web';
-        const allowedBackgroundJob = [
-          'built-in-workers/server',
-        ].includes(`${name}/${proc}`);
+        const { type } = procs[proc];
+        const isWeb = type === 'web';
+        const isBackground = type === 'background';
+        const isCron = type === 'cron';
+        const allowedBackgroundJob = allowedBackgroundJobs.includes(`${name}/${proc}`);
 
-        if (!isWeb && !allowedBackgroundJob) {
+        if (!isWeb && !isBackground && !isCron && !allowedBackgroundJob) {
           return;
         }
 
@@ -320,15 +472,10 @@ exports.tasks.push({
           };
         }
 
-        const healthchecks = isWeb ? {
-          healthcheck: healthcheck(`wget -q --spider http://localhost:${serviceHostPort(name)}/api/${name}/v1/ping`),
-        } : {};
-
-        dockerCompose.services[`${name}-${proc}`] = serviceDefinition(name, {
+        const serviceOptions = {
           // entrypoint is defined in dockerfile
           // command is defined in entrypoint and is SERVICE/PROC
           command: [`${name}/${proc}`],
-          ...healthchecks,
           depends_on: {
             rabbitmq: {
               condition: 'service_healthy',
@@ -338,13 +485,49 @@ exports.tasks.push({
             },
             ...extraDependencies,
           },
-        });
+          _useEnvFile: true,
+        };
+
+        if (isWeb) {
+          serviceOptions['healthcheck'] = healthcheck(`wget -q --spider http://localhost:${serviceHostPort(name)}/api/${name}/v1/ping`);
+        }
+
+        let serviceSuffix = '';
+        if (!allowedBackgroundJob && (isCron || isBackground)) {
+          serviceOptions['profiles'] = [type, name, `${name}-${type}`];
+          serviceOptions['_noPorts'] = true;
+          serviceSuffix = `-${type}`;
+        }
+
+        const svcName = `${name}${serviceSuffix}-${proc}`;
+        dockerCompose.services[svcName] = serviceDefinition(name, serviceOptions);
+        dockerComposeProd.services[svcName] = serviceDefinitionProd(name, serviceOptions['profiles']);
+        dockerComposeDev.services[svcName] = serviceDefinitionDev(name, serviceOptions['profiles'], procs[proc].command);
+        envFiles[name] = serviceEnv(name);
       });
     }
 
     await writeRepoYAML(path.join('.', COMPOSE_FILENAME), dockerCompose);
+    await writeRepoYAML(path.join('.', PROD_COMPOSE_FILENAME), dockerComposeProd);
+    await writeRepoYAML(path.join('.', DEV_COMPOSE_FILENAME), dockerComposeDev);
+
+    await Promise.all(
+      Object.keys(envFiles)
+        .map(svcName => writeRepoFile(
+          `${ENV_FILE_PATH}.${svcName}`,
+          `# This file is autogenerated for ${svcName} service\n` +
+          '# If you need to override some values, please use docker-compose.override.yml file instead\n' +
+          Object.entries(envFiles[svcName])
+            .map(([envName, envValue]) => `${envName}=${typeof envValue === 'undefined' ? '' : envValue}`)
+            .join('\n') + '\n',
+        )),
+    );
+
     return {
       'target-docker-compose.yml': dockerCompose,
+      'target-docker-compose.prod.yml': dockerComposeProd,
+      'target-docker-compose.dev.yml': dockerComposeDev,
+      'target-env-files': envFiles,
     };
   },
 });
@@ -355,9 +538,11 @@ exports.tasks.push({
   provides: ['target-nginx.conf'],
   run: async (requirements, utils) => {
     const extraDirectives = `proxy_hide_header Content-Security-Policy;
-      proxy_set_header Host ingress;`;
+      proxy_set_header Host taskcluster;`;
 
     const conf = `
+# this file is autogenerated
+
 worker_processes  1;
 error_log  stderr;
 events {
@@ -375,24 +560,54 @@ http {
     server_name _;
 
     location / {
-      proxy_pass http://ui;
+      set $pass http://ui;
+      proxy_pass $pass;
+      ${extraDirectives}
+    }
+    location /references {
+      set $pass http://references;
+      proxy_pass $pass;
+      ${extraDirectives}
+    }
+    location /schemas {
+      set $pass http://references;
+      proxy_pass $pass;
       ${extraDirectives}
     }
     location /login {
-      proxy_pass http://web-server-web:${serviceHostPort('web-server')};
+      set $pass http://web-server-web:${serviceHostPort('web-server')};
+      proxy_pass $pass;
       ${extraDirectives}
     }
     location /graphql {
-      proxy_pass http://web-server-web:${serviceHostPort('web-server')};
+      set $pass http://web-server-web:${serviceHostPort('web-server')};
+      proxy_pass $pass;
       ${extraDirectives}
     }
     location /subscription {
-      proxy_pass http://web-server-web:${serviceHostPort('web-server')};
+      set $pass http://web-server-web:${serviceHostPort('web-server')};
+      proxy_pass $pass;
       ${extraDirectives}
+      proxy_set_header Upgrade $http_upgrade; # websocket
+      proxy_set_header Connection "Upgrade"; # websocket
+    }
+    location /public-bucket/ {
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_set_header Host $http_host;
+
+      proxy_connect_timeout 300;
+      proxy_http_version 1.1;
+      proxy_set_header Connection "";
+      chunked_transfer_encoding off;
+
+      proxy_pass http://s3:9000;
     }
 ${SERVICES.filter(name => !!ports[name]).map(name => `
     location /api/${name} {
-      proxy_pass http://${name}-web;
+      set $pass http://${name}-web;
+      proxy_pass $pass;
       ${extraDirectives}
     }`).join('\n')}
   }

@@ -163,10 +163,13 @@ const renderTemplates = async (name, vars, procs, templates) => {
     const rendered = jsone(templates[tmpl], context);
 
     // json-e can't create a "naked" string for go templates to use to render an integer.
-    // thankfully this is the only case where this bites us (so far), so we can just do some
-    // post processing
-    const replicaConfigString = `{{ int (.Values.${context.configName}.procs.${context.configProcName}.replicas) }}`;
-    const processed = yaml.dump(rendered, { lineWidth: -1 }).replace('REPLICA_CONFIG_STRING', replicaConfigString);
+    // we have to do some post-processing to use "advanced" go template features
+    const replacements = {
+      REPLICA_CONFIG_STRING: `{{ int (.Values.${context.configName}.procs.${context.configProcName}.replicas) }}`,
+      IMAGE_PULL_SECRETS_STRING: '{{ if .Values.imagePullSecret }}{{ toJson (list (dict "name" .Values.imagePullSecret)) }}{{ else }}[]{{ end }}',
+    };
+    const processed = yaml.dump(rendered, { lineWidth: -1 })
+      .replaceAll(new RegExp(`(${Object.keys(replacements).join('|')})`, 'g'), (match, p1) => replacements[match]);
 
     const filename = `taskcluster-${name}-${tmpl}-${proc}.yaml`;
     await writeRepoFile(path.join(TMPL_DIR, filename), processed);
@@ -194,7 +197,7 @@ exports.tasks.push({
 });
 
 exports.tasks.push({
-  title: `Clear k8s/templates dirctory`,
+  title: `Clear k8s/templates directory`,
   requires: [],
   provides: ['k8s-templates-dir'],
   run: async (requirements, utils) => {
@@ -248,9 +251,7 @@ const extras = {
         type: 'web',
         readinessPath: '/references/',
         paths: [
-          '/references',
           '/references/*',
-          '/schemas',
           '/schemas/*',
         ],
       },
@@ -402,6 +403,22 @@ exports.tasks.push({
           },
           additionalProperties: { type: 'string' },
         },
+        ingressType: {
+          type: 'string',
+          description: 'Allows to use non-GLB ingress types, like "nginx"',
+        },
+        ingressTlsSecretName: {
+          type: 'string',
+          description: 'Name of the secret where cert is stored, i.e. "dev-cert". This can be provisioned manually or automatically, by using cert-manager',
+        },
+        certManagerClusterIssuerName: {
+          type: 'string',
+          description: 'Name of the cluster issuer, i.e. "letsencrypt-prod"',
+        },
+        imagePullSecret: {
+          type: 'string',
+          description: 'Secret name with docker credentials for private registry',
+        },
       },
       required: ['rootUrl', 'dockerImage', 'pulseHostname', 'pulseVhost', 'forceSSL', 'trustProxy', 'nodeEnv', 'useKubernetesDnsServiceDiscovery'],
       additionalProperties: false,
@@ -414,6 +431,9 @@ exports.tasks.push({
       dockerImage: '...',
       ingressStaticIpName: '...',
       ingressCertName: '...',
+      ingressType: '...',
+      ingressTlsSecretName: '',
+      certManagerClusterIssuerName: '',
       pulseHostname: '...',
       pulseAmqps: true,
       pulseVhost: '...',

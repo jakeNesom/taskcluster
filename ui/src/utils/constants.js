@@ -76,9 +76,11 @@ export const INTERACTIVE_TASK_STATUS = {
   RESOLVED: 'RESOLVED',
   READY: 'READY',
 };
-export const INTERACTIVE_CONNECT_TASK_POLL_INTERVAL = 10000; // 10 seconds
-export const TASK_POLL_INTERVAL = 30000; // 30 seconds
-export const VNC_DISPLAYS_POLLING_INTERVAL = 10000; // 10 seconds
+const SECOND = 1000;
+
+export const INTERACTIVE_CONNECT_TASK_POLL_INTERVAL = 10 * SECOND;
+export const TASK_POLL_INTERVAL = 60 * SECOND;
+export const VNC_DISPLAYS_POLLING_INTERVAL = 10 * SECOND;
 export const INITIAL_CURSOR = '$$FIRST$$';
 export const INITIAL_TASK_GROUP_NOTIFICATION_PREFERENCES = {
   groupNotifyTaskFailed: false,
@@ -284,3 +286,58 @@ export const NULL_WORKER_POOL = {
   config: {},
 };
 export const UI_SCHEDULER_ID = 'taskcluster-ui';
+
+const payloadCommand = [
+  '/bin/bash',
+  '-c',
+  'for ((i=1;i<=600;i++)); do echo $i; sleep 1; done',
+];
+
+export const TASK_PAYLOAD_SCHEMAS = {
+  'docker-worker': {
+    label: 'Docker worker',
+    type: 'docker-worker',
+    schema: 'v1/payload.json',
+    samplePayload: {
+      image: 'ubuntu:latest',
+      command: payloadCommand,
+      maxRunTime: 600 + 30,
+    },
+  },
+  'generic-simple-posix': {
+    label: 'Generic worker simple posix',
+    type: 'generic-worker',
+    schema: 'simple_posix.json',
+    samplePayload: {
+      command: [payloadCommand],
+      maxRunTime: 600 + 30,
+    },
+  },
+  'generic-multi-win': {
+    label: 'Generic worker multiuser windows',
+    type: 'generic-worker',
+    schema: 'multiuser_windows.json',
+    samplePayload: {
+      command: ['dir'],
+      maxRunTime: 600 + 30,
+    },
+  },
+  'generic-multi-posix': {
+    label: 'Generic worker multiuser posix',
+    type: 'generic-worker',
+    schema: 'multiuser_posix.json',
+    samplePayload: {
+      command: [payloadCommand],
+      maxRunTime: 600 + 30,
+    },
+  },
+  'generic-docker-posix': {
+    label: 'Generic worker docker posix',
+    type: 'generic-worker',
+    schema: 'docker_posix.json',
+    samplePayload: {
+      command: [payloadCommand],
+      maxRunTime: 600 + 30,
+    },
+  },
+};

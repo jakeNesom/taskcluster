@@ -281,6 +281,7 @@ class Worker {
       lastChecked: row.last_checked,
       etag: row.etag,
       secret: row.secret,
+      implementation: row.implementation,
       quarantineUntil: row.quarantine_until,
       firstClaim: row.first_claim,
       recentTasks: row.recent_tasks,
@@ -314,7 +315,7 @@ class Worker {
 
   // Get a worker from the DB, or undefined if it does not exist.
   static async get(db, { workerPoolId, workerGroup, workerId }) {
-    return Worker.fromDbRows(await db.fns.get_worker_2(workerPoolId, workerGroup, workerId));
+    return Worker.fromDbRows(await db.fns.get_worker_3(workerPoolId, workerGroup, workerId));
   }
 
   // Get a queue worker from the DB, or undefined if it does not exist.
@@ -455,6 +456,7 @@ class Worker {
       recentTasks: _.cloneDeep(this.recentTasks),
       lastDateActive: this.lastDateActive?.toJSON(),
       quarantineUntil: this.quarantineUntil?.toJSON(),
+      implementation: this.implementation,
     };
 
     // Remove properties that should not be in this response schema.
@@ -475,6 +477,11 @@ class Worker {
       delete worker.created;
       delete worker.lastModified;
       delete worker.lastChecked;
+    }
+
+    // if this is an old worker that didn't register implementation details, we don't send it back
+    if (!worker.implementation) {
+      delete worker.implementation;
     }
 
     return worker;
@@ -503,7 +510,7 @@ class Worker {
 
       if (!_.isEqual(newProperties, this._properties)) {
         try {
-          [result] = await db.fns.update_worker_2(
+          [result] = await db.fns.update_worker_3(
             newProperties.workerPoolId,
             newProperties.workerGroup,
             newProperties.workerId,
@@ -517,6 +524,7 @@ class Worker {
             newProperties.lastChecked,
             newProperties.etag,
             newProperties.secret,
+            newProperties.implementation,
           );
 
           const worker = Worker.fromDb(result);

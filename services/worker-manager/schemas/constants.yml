@@ -169,3 +169,22 @@ action-url-description: |
   | worker      | <provisionerId>, <workerType>, <workerGroup>, <workerId> |
 
   _Note: The request needs to be signed with the user's Taskcluster credentials._
+
+implementation-name:
+  description: |
+    Worker implementation name: 'generic-worker', 'docker-worker', 'any-worker'
+  type: string
+  minLength: 5
+  maxLength: 30
+  pattern: "^[a-z-]+worker$"
+
+implementation-version:
+  title: Worker version
+  type: string
+  pattern: "^[0-9][0-9.]+$"
+
+implementation-schema:
+  title: Worker payload schema
+  type: string
+  minLength: 0
+  maxLength: 65536

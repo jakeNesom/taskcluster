@@ -355,8 +355,8 @@ builder.declare({
     projectId: someTaskInGroup.projectId,
   });
 
-  // naïve approach
-  const allTasks = await this.db.fns.get_tasks_by_task_group_projid(taskGroupId, null, null);
+  // this will iterate and cancel all tasks that can be canceled and return all tasks
+  const allTasks = await this.db.fns.cancel_task_group(taskGroupId, 'canceled');
 
   const response = {
     taskGroupSize: allTasks.length,
@@ -365,21 +365,8 @@ builder.declare({
     taskGroupId,
   };
 
-  const allowedStates = ['unscheduled', 'pending', 'running'];
-
   for (let task of allTasks) {
     task = Task.fromDb(task);
-    if (!allowedStates.includes(task.state())) {
-      continue;
-    }
-
-    // copy-paste from cancelTask method
-    if (!task.updateStatusWith(
-      await this.db.fns.cancel_task(task.taskId, 'canceled'))) {
-      // modification failed, so re-fetch the task and continue; this may send
-      // a duplicate pulse message, but that's OK
-      task = await Task.get(this.db, task.taskId);
-    }
 
     // Get the last run, there should always be one
     let run = _.last(task.runs);

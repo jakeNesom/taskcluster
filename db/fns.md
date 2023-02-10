@@ -1391,15 +1391,23 @@ status, or nothing if the current status was not as expected.
 
 * *Mode*: write
 * *Arguments*:
-  * `task_group_id text`
+  * `task_group_id_in text`
   * `reason text`
 * *Returns*: `table`
-  * `totalCount integer`
-  * `cancelledCount integer`
-  * `taskIds jsonb`
+  * `   task_id text`
+  * `  task_queue_id text`
+  * `  project_id text`
+  * `  scheduler_id text`
+  * `  task_group_id text`
+  * `  deadline timestamptz`
+  * `  expires timestamptz`
+  * `  retries_left integer`
+  * `  runs jsonb`
+  * `  taken_until timestamptz `
 * *Last defined on version*: 81
 
-This cancels all non-resolved tasks for the given task group and attempts to cancel each
+This cancels all non-resolved tasks for the given task group
+by calling existing cancel_task() procedure.
 
 ### check_task_claim
 

@@ -6433,6 +6433,21 @@
         }
       },
       "version": 80
+    },
+    {
+      "description": "cancel multiple tasks for a given taskGroupId",
+      "methods": {
+        "cancel_task_group": {
+          "args": "task_group_id text, reason text",
+          "body": "declare\n  taskIds jsonb;\n  runs jsonb;\n  run jsonb;\nbegin\n\nend",
+          "deprecated": false,
+          "description": "This cancels all non-resolved tasks for the given task group and attempts to cancel each",
+          "mode": "write",
+          "returns": "table(totalCount integer, cancelledCount integer, taskIds jsonb)",
+          "serviceName": "queue"
+        }
+      },
+      "version": 81
     }
   ]
 }

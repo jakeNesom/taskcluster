@@ -1,0 +1,18 @@
+version: 81
+description: cancel multiple tasks for a given taskGroupId
+methods:
+  cancel_task_group:
+    description: |-
+      This cancels all non-resolved tasks for the given task group and attempts to cancel each
+    mode: write
+    serviceName: queue
+    args: task_group_id text, reason text
+    returns: table(totalCount integer, cancelledCount integer, taskIds jsonb)
+    body: |-
+      declare
+        taskIds jsonb;
+        runs jsonb;
+        run jsonb;
+      begin
+
+      end

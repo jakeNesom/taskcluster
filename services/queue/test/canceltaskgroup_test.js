@@ -59,7 +59,7 @@ helper.secrets.mockSuite(testing.suiteName(), ['aws'], function (mock, skipping)
     debug('### Cancel Task Group');
     const r2 = await helper.queue.cancelTaskGroup(taskGroupId);
     assume(r2.taskGroupId).equals(taskGroupId);
-    assume(r2.totalCount).equals(INITIAL_TASK_COUNT);
+    assume(r2.taskGroupSize).equals(INITIAL_TASK_COUNT);
     assume(r2.cancelledCount).equals(INITIAL_TASK_COUNT);
     assume(r2.taskIds.length).equals(INITIAL_TASK_COUNT);
 
@@ -76,14 +76,14 @@ helper.secrets.mockSuite(testing.suiteName(), ['aws'], function (mock, skipping)
 
     debug('### Cancel Task Group (again)');
     const r3 = await helper.queue.cancelTaskGroup(taskGroupId);
-    assume(r3.totalCount).equals(INITIAL_TASK_COUNT + 1);
+    assume(r3.taskGroupSize).equals(INITIAL_TASK_COUNT + 1);
     assume(r3.cancelledCount).equals(1);
     assume(r3.taskIds).deep.equals([taskId]);
     helper.assertPulseMessage('task-exception', m => _.isEqual(m.payload.status.taskId, taskId));
 
     debug('### Cancel Task Group yet again');
     const r4 = await helper.queue.cancelTaskGroup(taskGroupId);
-    assume(r4.totalCount).equals(INITIAL_TASK_COUNT + 1);
+    assume(r4.taskGroupSize).equals(INITIAL_TASK_COUNT + 1);
     assume(r4.cancelledCount).equals(0);
   });
 
@@ -126,7 +126,7 @@ helper.secrets.mockSuite(testing.suiteName(), ['aws'], function (mock, skipping)
 
     helper.scopes(`queue:cancel-task-group:${schedulerId}/${taskGroupId}`);
     const r3 = await helper.queue.cancelTaskGroup(taskGroupId);
-    assume(r3.totalCount).equals(1);
+    assume(r3.taskGroupSize).equals(1);
     assume(r3.cancelledCount).equals(0); // was already cancelled
 
     helper.clearPulseMessages();
@@ -157,7 +157,7 @@ helper.secrets.mockSuite(testing.suiteName(), ['aws'], function (mock, skipping)
     debug('### Cancel Task Group');
     const r2 = await helper.queue.cancelTaskGroup(taskGroupId);
     assume(r2.taskGroupId).equals(taskGroupId);
-    assume(r2.totalCount).equals(INITIAL_TASK_COUNT);
+    assume(r2.taskGroupSize).equals(INITIAL_TASK_COUNT);
     assume(r2.cancelledCount).equals(INITIAL_TASK_COUNT - 1);
     assume(r2.taskIds).deep.equals(taskDefs.slice(1).map(({ taskId }) => taskId));
   });

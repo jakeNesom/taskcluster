@@ -77,6 +77,7 @@
    * [`azure_queue_put`](#azure_queue_put)
    * [`azure_queue_update`](#azure_queue_update)
    * [`cancel_task`](#cancel_task)
+   * [`cancel_task_group`](#cancel_task_group)
    * [`check_task_claim`](#check_task_claim)
    * [`claim_task`](#claim_task)
    * [`create_queue_artifact`](#create_queue_artifact)
@@ -1227,6 +1228,7 @@ List the caches for this `provisioner_id_in`/`worker_type_in`.
 * [`azure_queue_put`](#azure_queue_put)
 * [`azure_queue_update`](#azure_queue_update)
 * [`cancel_task`](#cancel_task)
+* [`cancel_task_group`](#cancel_task_group)
 * [`check_task_claim`](#check_task_claim)
 * [`claim_task`](#claim_task)
 * [`create_queue_artifact`](#create_queue_artifact)
@@ -1384,6 +1386,20 @@ If the current run is pending or running, mark it as exception with the given
 reason.  If the task is unscheduled, a run with that status is
 created to represent the cancellation.  This returns the task's updated
 status, or nothing if the current status was not as expected.
+
+### cancel_task_group
+
+* *Mode*: write
+* *Arguments*:
+  * `task_group_id text`
+  * `reason text`
+* *Returns*: `table`
+  * `totalCount integer`
+  * `cancelledCount integer`
+  * `taskIds jsonb`
+* *Last defined on version*: 81
+
+This cancels all non-resolved tasks for the given task group and attempts to cancel each
 
 ### check_task_claim
 

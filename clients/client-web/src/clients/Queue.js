@@ -119,11 +119,12 @@ export default class Queue extends Client {
     return this.request(this.listTaskGroup.entry, args);
   }
   /* eslint-disable max-len */
-  // This method will cancel all tasks with a given `taskGroupId` that are not resolved yet.
-  // That means all tasks in either `unscheduled`, `pending` or `running` states.
-  // Behaviour is similar to the `cancelTask` method.
-  // **Remark** this operation does not guarantee that new tasks created for this `taskGroupId`
-  // would automatically be rejected. For example when running task keeps creating new tasks.
+  // This method will cancel all unresolved tasks (`unscheduled`, `pending` or `running` states)
+  // with the given `taskGroupId`. Behaviour is similar to the `cancelTask` method.
+  // **Remark** a cancelled task may continue to run with valid credentials on a worker for
+  // several minutes after being cancelled, potentially creating new tasks. These tasks
+  // will not be subject to cancellation, and therefore multiple calls may be required to
+  // cancel the additional tasks too.
   /* eslint-enable max-len */
   cancelTaskGroup(...args) {
     this.validate(this.cancelTaskGroup.entry, args);

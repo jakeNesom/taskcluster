@@ -48,7 +48,7 @@ func TestFakeServerSuite(t *testing.T) {
 // returns the test status on request
 func cancelGroupHandler(w http.ResponseWriter, _ *http.Request) {
 	status := `{
-				  "totalCount": 1,
+				  "taskGroupSize": 1,
 				  "cancelledCount": 1,
 				  "taskGroupId": "e4WPJRJeSdaSdKxeWzDlNQ",
 					"taskIds": ["ANnmjMocTymeTID0tlNJAw"]

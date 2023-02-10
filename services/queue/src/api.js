@@ -327,7 +327,6 @@ builder.declare({
   ].join('\n'),
 }, async function(req, res) {
   const taskGroupId = req.params.taskGroupId;
-  // allow query.reasonResolved ? cancel | superseded
 
   const [taskGroup] = await this.db.fns.get_task_group(taskGroupId);
   if (!taskGroup) {
@@ -360,7 +359,7 @@ builder.declare({
   const allTasks = await this.db.fns.get_tasks_by_task_group_projid(taskGroupId, null, null);
 
   const response = {
-    totalCount: allTasks.length,
+    taskGroupSize: allTasks.length,
     taskIds: [],
     cancelledCount: 0,
     taskGroupId,
@@ -370,8 +369,7 @@ builder.declare({
 
   for (let task of allTasks) {
     task = Task.fromDb(task);
-    // skip resolved and deadline exceeded tasks
-    if (!allowedStates.includes(task.state()) || task.deadline.getTime() < new Date().getTime()) {
+    if (!allowedStates.includes(task.state())) {
       continue;
     }
 
@@ -420,7 +418,7 @@ builder.declare({
 
   this.monitor.log.taskGroupCancelled({
     taskGroupId,
-    totalCount: response.totalCount,
+    taskGroupSize: response.taskGroupSize,
     cancelledCount: response.cancelledCount,
   });
 

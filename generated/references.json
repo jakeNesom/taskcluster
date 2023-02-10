@@ -4643,7 +4643,7 @@
       "description": "Response from a `cancelTaskGroup` request.\n",
       "properties": {
         "cancelledCount": {
-          "description": "Total number of tasks that were cancelled with this call.\nIt includes all non-resolved tasks with deadline in the future.\n",
+          "description": "Total number of tasks that were cancelled with this call.\nIt includes all non-resolved tasks.\n",
           "minimum": 0,
           "title": "Total number of cancelled tasks",
           "type": "integer"
@@ -4654,8 +4654,14 @@
           "title": "Task-Group Identifier",
           "type": "string"
         },
+        "taskGroupSize": {
+          "description": "Current count of tasks in the task group.\n",
+          "minimum": 0,
+          "title": "Task-Group size",
+          "type": "integer"
+        },
         "taskIds": {
-          "description": "List of IDs of tasks that were cancelled with this call\n",
+          "description": "List of `taskIds` cancelled by this call.\n",
           "items": {
             "pattern": "^[A-Za-z0-9_-]{8}[Q-T][A-Za-z0-9_-][CGKOSWaeimquy26-][A-Za-z0-9_-]{10}[AQgw]$",
             "type": "string"
@@ -4663,17 +4669,11 @@
           "title": "List of task IDs",
           "type": "array",
           "uniqueItems": true
-        },
-        "totalCount": {
-          "description": "Total number of tasks that existed at the moment of the call.\n",
-          "minimum": 0,
-          "title": "Total number of tasks",
-          "type": "integer"
         }
       },
       "required": [
         "taskGroupId",
-        "totalCount",
+        "taskGroupSize",
         "cancelledCount",
         "taskIds"
       ],
@@ -14775,7 +14775,7 @@
           "fields": {
             "cancelledCount": "Total count of tasks whose state was changed",
             "taskGroupId": "The task group id.",
-            "totalCount": "Total count of tasks in group at the moment of cancellation"
+            "taskGroupSize": "Total count of tasks in group at the moment of cancellation"
           },
           "level": "notice",
           "name": "taskGroupCancelled",
@@ -15488,7 +15488,7 @@
             "taskGroupId"
           ],
           "category": "Tasks",
-          "description": "This method will cancel all tasks with a given `taskGroupId` that are not resolved yet.\nThat means all tasks in either `unscheduled`, `pending` or `running` states.\nBehaviour is similar to the `cancelTask` method.\n\n**Remark** this operation does not guarantee that new tasks created for this `taskGroupId`\nwould automatically be rejected. For example when running task keeps creating new tasks.",
+          "description": "This method will cancel all unresolved tasks (`unscheduled`, `pending` or `running` states)\nwith the given `taskGroupId`. Behaviour is similar to the `cancelTask` method.\n\n**Remark** a cancelled task may continue to run with valid credentials on a worker for\nseveral minutes after being cancelled, potentially creating new tasks. These tasks\nwill not be subject to cancellation, and therefore multiple calls may be required to\ncancel the additional tasks too.",
           "method": "post",
           "name": "cancelTaskGroup",
           "output": "v1/cancel-task-group-response.json#",

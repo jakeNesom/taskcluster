@@ -124,7 +124,7 @@ type (
 	CancelTaskGroupResponse struct {
 
 		// Total number of tasks that were cancelled with this call.
-		// It includes all non-resolved tasks with deadline in the future.
+		// It includes all non-resolved tasks.
 		//
 		// Mininum:    0
 		CancelledCount int64 `json:"cancelledCount"`
@@ -134,16 +134,16 @@ type (
 		// Syntax:     ^[A-Za-z0-9_-]{8}[Q-T][A-Za-z0-9_-][CGKOSWaeimquy26-][A-Za-z0-9_-]{10}[AQgw]$
 		TaskGroupID string `json:"taskGroupId"`
 
-		// List of IDs of tasks that were cancelled with this call
+		// Current count of tasks in the task group.
+		//
+		// Mininum:    0
+		TaskGroupSize int64 `json:"taskGroupSize"`
+
+		// List of `taskIds` cancelled by this call.
 		//
 		// Array items:
 		// Syntax:     ^[A-Za-z0-9_-]{8}[Q-T][A-Za-z0-9_-][CGKOSWaeimquy26-][A-Za-z0-9_-]{10}[AQgw]$
 		TaskIds []string `json:"taskIds"`
-
-		// Total number of tasks that existed at the moment of the call.
-		//
-		// Mininum:    0
-		TotalCount int64 `json:"totalCount"`
 	}
 
 	// Request to claim a task for a worker to process.

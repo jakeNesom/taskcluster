@@ -111,7 +111,7 @@ func runCancel(credentials *tcclient.Credentials, args []string, out io.Writer, 
 		panic(fmt.Errorf("Could not cancel task group %s: %v", groupID, cancelError))
 	}
 
-	fmt.Fprintf(out, "Tasks cancelled: %d out of %d\n", res.CancelledCount, res.TotalCount)
+	fmt.Fprintf(out, "Tasks cancelled: %d out of %d\n", res.CancelledCount, res.TaskGroupSize)
 	for _, taskID := range res.TaskIds {
 		fmt.Fprintf(out, "Cancelled task %s\n", taskID)
 	}

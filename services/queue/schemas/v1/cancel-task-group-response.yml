@@ -10,24 +10,24 @@ properties:
       Identifier for the task-group being listed.
     type:           string
     pattern:        {$const: slugid-pattern}
-  totalCount:
+  taskGroupSize:
     type:           integer
     minimum:        0
-    title:          "Total number of tasks"
+    title:          "Task-Group size"
     description: |
-      Total number of tasks that existed at the moment of the call.
+      Current count of tasks in the task group.
   cancelledCount:
     type:           integer
     minimum:        0
     title:          "Total number of cancelled tasks"
     description: |
       Total number of tasks that were cancelled with this call.
-      It includes all non-resolved tasks with deadline in the future.
+      It includes all non-resolved tasks.
   taskIds:
     type:           array
     title:          "List of task IDs"
     description: |
-      List of IDs of tasks that were cancelled with this call
+      List of `taskIds` cancelled by this call.
     uniqueItems: true
     items:
       type:         string
@@ -35,6 +35,6 @@ properties:
 additionalProperties: false
 required:
  - taskGroupId
- - totalCount
+ - taskGroupSize
  - cancelledCount
  - taskIds

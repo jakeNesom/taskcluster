@@ -4637,6 +4637,53 @@
   },
   {
     "content": {
+      "$id": "/schemas/queue/v1/cancel-task-group-response.json#",
+      "$schema": "/schemas/common/metaschema.json#",
+      "additionalProperties": false,
+      "description": "Response from a `cancelTaskGroup` request.\n",
+      "properties": {
+        "cancelledCount": {
+          "description": "Total number of tasks that were cancelled with this call.\nIt includes all non-resolved tasks with deadline in the future.\n",
+          "minimum": 0,
+          "title": "Total number of cancelled tasks",
+          "type": "integer"
+        },
+        "taskGroupId": {
+          "description": "Identifier for the task-group being listed.\n",
+          "pattern": "^[A-Za-z0-9_-]{8}[Q-T][A-Za-z0-9_-][CGKOSWaeimquy26-][A-Za-z0-9_-]{10}[AQgw]$",
+          "title": "Task-Group Identifier",
+          "type": "string"
+        },
+        "taskIds": {
+          "description": "List of IDs of tasks that were cancelled with this call\n",
+          "items": {
+            "pattern": "^[A-Za-z0-9_-]{8}[Q-T][A-Za-z0-9_-][CGKOSWaeimquy26-][A-Za-z0-9_-]{10}[AQgw]$",
+            "type": "string"
+          },
+          "title": "List of task IDs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "totalCount": {
+          "description": "Total number of tasks that existed at the moment of the call.\n",
+          "minimum": 0,
+          "title": "Total number of tasks",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "taskGroupId",
+        "totalCount",
+        "cancelledCount",
+        "taskIds"
+      ],
+      "title": "Cancel Task-Group Response",
+      "type": "object"
+    },
+    "filename": "schemas/queue/v1/cancel-task-group-response.json"
+  },
+  {
+    "content": {
       "$id": "/schemas/queue/v1/artifact-response.json#",
       "$schema": "/schemas/common/metaschema.json#",
       "additionalProperties": false,
@@ -14724,6 +14771,19 @@
           "version": 1
         },
         {
+          "description": "All non-resolved tasks within given task group have been cancelled.",
+          "fields": {
+            "cancelledCount": "Total count of tasks whose state was changed",
+            "taskGroupId": "The task group id.",
+            "totalCount": "Total count of tasks in group at the moment of cancellation"
+          },
+          "level": "notice",
+          "name": "taskGroupCancelled",
+          "title": "Task Group Cancelled",
+          "type": "task-group-cancelled",
+          "version": 1
+        },
+        {
           "description": "A task is now pending and ready to be executed.  This is logged when the task-pending pulse\nmessage is sent.",
           "fields": {
             "runId": "The runId that is now pending.",
@@ -15421,6 +15481,28 @@
           "scopes": "queue:list-task-group:<taskGroupId>",
           "stability": "stable",
           "title": "List Task Group",
+          "type": "function"
+        },
+        {
+          "args": [
+            "taskGroupId"
+          ],
+          "category": "Tasks",
+          "description": "This method will cancel all tasks with a given `taskGroupId` that are not resolved yet.\nThat means all tasks in either `unscheduled`, `pending` or `running` states.\nBehaviour is similar to the `cancelTask` method.\n\n**Remark** this operation does not guarantee that new tasks created for this `taskGroupId`\nwould automatically be rejected. For example when running task keeps creating new tasks.",
+          "method": "post",
+          "name": "cancelTaskGroup",
+          "output": "v1/cancel-task-group-response.json#",
+          "query": [
+          ],
+          "route": "/task-group/<taskGroupId>/cancel",
+          "scopes": {
+            "AnyOf": [
+              "queue:cancel-task-group:<schedulerId>/<taskGroupId>",
+              "queue:cancel-task-in-project:<projectId>"
+            ]
+          },
+          "stability": "experimental",
+          "title": "Cancel Task Group",
           "type": "function"
         },
         {

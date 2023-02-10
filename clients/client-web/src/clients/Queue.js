@@ -16,6 +16,7 @@ export default class Queue extends Client {
     this.task.entry = {"args":["taskId"],"category":"Tasks","method":"get","name":"task","output":true,"query":[],"route":"/task/<taskId>","scopes":"queue:get-task:<taskId>","stability":"stable","type":"function"}; // eslint-disable-line
     this.status.entry = {"args":["taskId"],"category":"Tasks","method":"get","name":"status","output":true,"query":[],"route":"/task/<taskId>/status","scopes":"queue:status:<taskId>","stability":"stable","type":"function"}; // eslint-disable-line
     this.listTaskGroup.entry = {"args":["taskGroupId"],"category":"Tasks","method":"get","name":"listTaskGroup","output":true,"query":["continuationToken","limit"],"route":"/task-group/<taskGroupId>/list","scopes":"queue:list-task-group:<taskGroupId>","stability":"stable","type":"function"}; // eslint-disable-line
+    this.cancelTaskGroup.entry = {"args":["taskGroupId"],"category":"Tasks","method":"post","name":"cancelTaskGroup","output":true,"query":[],"route":"/task-group/<taskGroupId>/cancel","scopes":{"AnyOf":["queue:cancel-task-group:<schedulerId>/<taskGroupId>","queue:cancel-task-in-project:<projectId>"]},"stability":"experimental","type":"function"}; // eslint-disable-line
     this.listDependentTasks.entry = {"args":["taskId"],"category":"Tasks","method":"get","name":"listDependentTasks","output":true,"query":["continuationToken","limit"],"route":"/task/<taskId>/dependents","scopes":"queue:list-dependent-tasks:<taskId>","stability":"stable","type":"function"}; // eslint-disable-line
     this.createTask.entry = {"args":["taskId"],"category":"Tasks","input":true,"method":"put","name":"createTask","output":true,"query":[],"route":"/task/<taskId>","scopes":{"AllOf":[{"each":"<scope>","for":"scope","in":"scopes"},{"each":"queue:route:<route>","for":"route","in":"routes"},"queue:create-task:project:<projectId>","queue:scheduler-id:<schedulerId>",{"AnyOf":[{"each":"queue:create-task:<priority>:<provisionerId>/<workerType>","for":"priority","in":"priorities"}]}]},"stability":"stable","type":"function"}; // eslint-disable-line
     this.scheduleTask.entry = {"args":["taskId"],"category":"Tasks","method":"post","name":"scheduleTask","output":true,"query":[],"route":"/task/<taskId>/schedule","scopes":{"AnyOf":["queue:schedule-task:<schedulerId>/<taskGroupId>/<taskId>","queue:schedule-task-in-project:<projectId>",{"AllOf":["queue:schedule-task","assume:scheduler-id:<schedulerId>/<taskGroupId>"]}]},"stability":"stable","type":"function"}; // eslint-disable-line
@@ -116,6 +117,18 @@ export default class Queue extends Client {
     this.validate(this.listTaskGroup.entry, args);
 
     return this.request(this.listTaskGroup.entry, args);
+  }
+  /* eslint-disable max-len */
+  // This method will cancel all tasks with a given `taskGroupId` that are not resolved yet.
+  // That means all tasks in either `unscheduled`, `pending` or `running` states.
+  // Behaviour is similar to the `cancelTask` method.
+  // **Remark** this operation does not guarantee that new tasks created for this `taskGroupId`
+  // would automatically be rejected. For example when running task keeps creating new tasks.
+  /* eslint-enable max-len */
+  cancelTaskGroup(...args) {
+    this.validate(this.cancelTaskGroup.entry, args);
+
+    return this.request(this.cancelTaskGroup.entry, args);
   }
   /* eslint-disable max-len */
   // List tasks that depend on the given `taskId`.

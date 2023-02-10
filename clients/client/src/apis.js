@@ -2229,6 +2229,28 @@ module.exports = {
         },
         {
           "args": [
+            "taskGroupId"
+          ],
+          "category": "Tasks",
+          "description": "This method will cancel all tasks with a given `taskGroupId` that are not resolved yet.\nThat means all tasks in either `unscheduled`, `pending` or `running` states.\nBehaviour is similar to the `cancelTask` method.\n\n**Remark** this operation does not guarantee that new tasks created for this `taskGroupId`\nwould automatically be rejected. For example when running task keeps creating new tasks.",
+          "method": "post",
+          "name": "cancelTaskGroup",
+          "output": "v1/cancel-task-group-response.json#",
+          "query": [
+          ],
+          "route": "/task-group/<taskGroupId>/cancel",
+          "scopes": {
+            "AnyOf": [
+              "queue:cancel-task-group:<schedulerId>/<taskGroupId>",
+              "queue:cancel-task-in-project:<projectId>"
+            ]
+          },
+          "stability": "experimental",
+          "title": "Cancel Task Group",
+          "type": "function"
+        },
+        {
+          "args": [
             "taskId"
           ],
           "category": "Tasks",

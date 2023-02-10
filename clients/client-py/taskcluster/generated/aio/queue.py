@@ -151,6 +151,22 @@ class Queue(AsyncBaseClient):
 
         return await self._makeApiCall(self.funcinfo["listTaskGroup"], *args, **kwargs)
 
+    async def cancelTaskGroup(self, *args, **kwargs):
+        """
+        Cancel Task Group
+
+        This method will cancel all tasks with a given `taskGroupId` that are not resolved yet.
+        That means all tasks in either `unscheduled`, `pending` or `running` states.
+        Behaviour is similar to the `cancelTask` method.
+
+        **Remark** this operation does not guarantee that new tasks created for this `taskGroupId`
+        would automatically be rejected. For example when running task keeps creating new tasks.
+
+        This method is ``experimental``
+        """
+
+        return await self._makeApiCall(self.funcinfo["cancelTaskGroup"], *args, **kwargs)
+
     async def listDependentTasks(self, *args, **kwargs):
         """
         List Dependent Tasks
@@ -852,6 +868,14 @@ class Queue(AsyncBaseClient):
             'output': 'v1/task-status-response.json#',
             'route': '/task/<taskId>/cancel',
             'stability': 'stable',
+        },
+        "cancelTaskGroup": {
+            'args': ['taskGroupId'],
+            'method': 'post',
+            'name': 'cancelTaskGroup',
+            'output': 'v1/cancel-task-group-response.json#',
+            'route': '/task-group/<taskGroupId>/cancel',
+            'stability': 'experimental',
         },
         "claimTask": {
             'args': ['taskId', 'runId'],

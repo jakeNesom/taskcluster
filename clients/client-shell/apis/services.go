@@ -1375,6 +1375,19 @@ var services = map[string]definitions.Service{
 				Input: "",
 			},
 			definitions.Entry{
+				Name:        "cancelTaskGroup",
+				Title:       "Cancel Task Group",
+				Description: "This method will cancel all tasks with a given `taskGroupId` that are not resolved yet.\nThat means all tasks in either `unscheduled`, `pending` or `running` states.\nBehaviour is similar to the `cancelTask` method.\n\n**Remark** this operation does not guarantee that new tasks created for this `taskGroupId`\nwould automatically be rejected. For example when running task keeps creating new tasks.",
+				Stability:   "experimental",
+				Method:      "post",
+				Route:       "/task-group/<taskGroupId>/cancel",
+				Args: []string{
+					"taskGroupId",
+				},
+				Query: []string{},
+				Input: "",
+			},
+			definitions.Entry{
 				Name:        "listDependentTasks",
 				Title:       "List Dependent Tasks",
 				Description: "List tasks that depend on the given `taskId`.\n\nAs many tasks from different task-groups may dependent on a single tasks,\nthis end-point may return a `continuationToken`. To continue listing\ntasks you must call `listDependentTasks` again with the\n`continuationToken` as the query-string option `continuationToken`.\n\nBy default this end-point will try to return up to 1000 tasks in one\nrequest. But it **may return less**, even if more tasks are available.\nIt may also return a `continuationToken` even though there are no more\nresults. However, you can only be sure to have seen all results if you\nkeep calling `listDependentTasks` with the last `continuationToken` until\nyou get a result without a `continuationToken`.\n\nIf you are not interested in listing all the tasks at once, you may\nuse the query-string option `limit` to return fewer.",

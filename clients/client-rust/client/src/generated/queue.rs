@@ -286,6 +286,30 @@ impl Queue {
         (path, query)
     }
 
+    /// Cancel Task Group
+    ///
+    /// This method will cancel all tasks with a given `taskGroupId` that are not resolved yet.
+    /// That means all tasks in either `unscheduled`, `pending` or `running` states.
+    /// Behaviour is similar to the `cancelTask` method.
+    ///
+    /// **Remark** this operation does not guarantee that new tasks created for this `taskGroupId`
+    /// would automatically be rejected. For example when running task keeps creating new tasks.
+    pub async fn cancelTaskGroup(&self, taskGroupId: &str) -> Result<Value, Error> {
+        let method = "POST";
+        let (path, query) = Self::cancelTaskGroup_details(taskGroupId);
+        let body = None;
+        let resp = self.client.request(method, &path, query, body).await?;
+        Ok(resp.json().await?)
+    }
+
+    /// Determine the HTTP request details for cancelTaskGroup
+    fn cancelTaskGroup_details<'a>(taskGroupId: &'a str) -> (String, Option<Vec<(&'static str, &'a str)>>) {
+        let path = format!("task-group/{}/cancel", urlencode(taskGroupId));
+        let query = None;
+
+        (path, query)
+    }
+
     /// List Dependent Tasks
     ///
     /// List tasks that depend on the given `taskId`.

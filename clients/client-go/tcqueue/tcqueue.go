@@ -270,6 +270,28 @@ func (queue *Queue) ListTaskGroup_SignedURL(taskGroupId, continuationToken, limi
 	return (&cd).SignedURL("/task-group/"+url.QueryEscape(taskGroupId)+"/list", v, duration)
 }
 
+// Stability: *** EXPERIMENTAL ***
+//
+// This method will cancel all tasks with a given `taskGroupId` that are not resolved yet.
+// That means all tasks in either `unscheduled`, `pending` or `running` states.
+// Behaviour is similar to the `cancelTask` method.
+//
+// **Remark** this operation does not guarantee that new tasks created for this `taskGroupId`
+// would automatically be rejected. For example when running task keeps creating new tasks.
+//
+// Required scopes:
+//
+//	Any of:
+//	- queue:cancel-task-group:<schedulerId>/<taskGroupId>
+//	- queue:cancel-task-in-project:<projectId>
+//
+// See #cancelTaskGroup
+func (queue *Queue) CancelTaskGroup(taskGroupId string) (*CancelTaskGroupResponse, error) {
+	cd := tcclient.Client(*queue)
+	responseObject, _, err := (&cd).APICall(nil, "POST", "/task-group/"+url.QueryEscape(taskGroupId)+"/cancel", new(CancelTaskGroupResponse), nil)
+	return responseObject.(*CancelTaskGroupResponse), err
+}
+
 // List tasks that depend on the given `taskId`.
 //
 // As many tasks from different task-groups may dependent on a single tasks,
